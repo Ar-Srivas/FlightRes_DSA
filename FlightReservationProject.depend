@@ -1,0 +1,18 @@
+# depslib dependency file v1.0
+1726071257 source:d:\projects\flightreservationproject\main.cpp
+	<iostream>
+	"Seat_matrix.cpp"
+
+1726071006 source:d:\projects\flightreservationproject\seat_matrix.cpp
+	<iostream>
+
+1726071006 d:\projects\flightreservationproject\seat_matrix.cpp
+	<iostream>
+
+1726071257 source:d:\projects\flightreservationproject\flightres_dsa\main.cpp
+	<iostream>
+	"Seat_matrix.cpp"
+
+1726071006 d:\projects\flightreservationproject\flightres_dsa\seat_matrix.cpp
+	<iostream>
+
