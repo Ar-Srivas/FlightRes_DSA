@@ -43,7 +43,7 @@ public:
             cout<<endl;
         }
     }
-    void book_seat()
+    void book_seat(int pos_i, int pos_j)
     {
     if (count_seat == m * n) {
         cout << "Flight is full" << endl;
@@ -54,9 +54,9 @@ public:
     {
       for (int j = 0; j < n; j++)
        {
-         if (seat[i][j] == 0)
+         if (seat[i][j] == 0&&i==pos_i&&j==pos_j)
          {
-            seat[i][j] = 1;
+            seat[i-1][j-1] = 1;
             count_seat++;
             return;
                 }
