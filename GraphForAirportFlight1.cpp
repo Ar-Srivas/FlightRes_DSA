@@ -2,6 +2,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <sstream> // Include stringstream for string handling
 using namespace std;
 
 class Flight {
@@ -21,32 +22,17 @@ public:
         adjList[source].push_back(Flight(destination));
     }
 
-    void displayFlightsFrom(const string& airportCode) {
+    // Modify to return a string of flight details instead of printing
+    string getFlightsFrom(const string& airportCode) {
         if (adjList.find(airportCode) == adjList.end()) {
-            cout << "No flights found from airport " << airportCode << endl;
-            return;
+            return "No flights found from airport " + airportCode + "\n"; // Return error message
         }
 
-        cout << "Flights from " << airportCode << ":" << endl;
+        stringstream ss;
+        ss << "Flights from " << airportCode << ":\n"; // Collect flights in a string
         for (const Flight& flight : adjList[airportCode]) {
-            cout << "  -> To " << flight.destination << endl;
+            ss << "To " << flight.destination << "\n"; // Add flight info to the string
         }
+        return ss.str(); // Return the collected flight information
     }
 };
-
-int main() {
-    AirportGraph flightMap;
-
-    flightMap.addFlight("JFK", "LAX");
-    flightMap.addFlight("JFK", "ORD");
-    flightMap.addFlight("LAX", "SFO");
-    flightMap.addFlight("ORD", "DFW");
-
-    string airportCode;
-    cout << "Enter the airport code to display flights from: ";
-    cin >> airportCode;
-
-    flightMap.displayFlightsFrom(airportCode);
-
-    return 0;
-}
