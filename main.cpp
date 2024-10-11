@@ -11,8 +11,7 @@ int main(int argc, char* argv[])
     Seat_mat s1;
     s1.default_Seat_Matrix();
     AirportGraph flightMap;
-
-    // Add some flights (This should ideally come from a database or a file)
+    
     flightMap.addFlight("JFK", "LAX");
     flightMap.addFlight("JFK", "ORD");
     flightMap.addFlight("LAX", "SFO");
@@ -43,14 +42,16 @@ int main(int argc, char* argv[])
         }
 
         int number_tickets = atoi(argv[2]);
+        
+        if (argc < (3 + 2 * number_tickets)) {
+            cout << "Insufficient seat position arguments." << endl;
+            return 1;
+        }
+
         vector<pair<int, int>> seat_positions; // To store seat positions
 
         // Retrieve seat positions from command line arguments
         for (int i = 0; i < number_tickets; i++) {
-            if (argc < 4 + 2 * i) {
-                cout << "Insufficient seat position arguments." << endl;
-                return 1;
-            }
             int pos_i = atoi(argv[3 + 2 * i]); // Row
             int pos_j = atoi(argv[4 + 2 * i]); // Column
             seat_positions.push_back(make_pair(pos_i, pos_j));
@@ -68,13 +69,17 @@ int main(int argc, char* argv[])
         // Display the updated seat matrix after booking
         cout << "Updated Seat Matrix after Booking:" << endl;
         s1.display_seat_Matrix();
+        cout << "Total seats booked: " << s1.get_booked_seat_count() << endl; // Show booked seat count
     } 
     // Display the seat matrix
     else if (command == "seats") {
         s1.display_seat_Matrix(); // Display current seat matrix
     }
     else {
-        cout << "Invalid command. Available commands: flights, book." << endl;
+        cout << "Invalid command. Available commands are:" << endl;
+        cout << "  flights <airportCode> - Display flights from the given airport." << endl;
+        cout << "  book <numTickets> <row1> <col1> <row2> <col2>... - Book seats." << endl;
+        cout << "  seats - Display the current seat matrix." << endl;
     }
 
     return 0;

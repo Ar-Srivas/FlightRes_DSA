@@ -10,9 +10,15 @@ customtkinter.set_default_color_theme("dark-blue")
 root = customtkinter.CTk()
 root.geometry("850x650")
 
+# Dictionary to keep track of open flight detail windows
+open_details_windows = {}
+# Dictionary to cache seat matrices for each flight
+seat_matrices_cache = {}
+
 # Function to handle search and display results
 def search_flights():
     query = search_entry.get().upper()  # Get user input from search bar
+    print(f"Searching for flights from: {query}")  # Debugging statement
     results_frame.pack_forget()  # Remove previous buttons before new search results
     results_frame.pack(pady=12, padx=10, fill="both", expand=True)
     
@@ -25,7 +31,7 @@ def search_flights():
 
     # Check for errors
     if result.returncode != 0:
-        print("Error fetching flights:", result.stderr)
+        print(f"Error fetching flights: {result.stderr}")  # Debugging statement
         return
 
     # Display the available flights returned by C++
@@ -36,19 +42,35 @@ def search_flights():
 
 # Function to open the flight details window
 def open_flight_details(flight_name):
+    if flight_name in open_details_windows:
+        # If the window is already open, bring it to the front
+        open_details_windows[flight_name].focus()
+        return
+
+    print(f"Opening details for flight: {flight_name}")  # Debugging statement
     details_window = customtkinter.CTkToplevel()
     details_window.geometry("800x600")
     details_window.title(f"Flight Details - {flight_name}")
-    
-    result = subprocess.run(['./main_executable', 'seats'], capture_output=True, text=True)
 
-    if result.returncode != 0 or "Invalid" in result.stdout:
-        print("Error fetching seat matrix:", result.stderr or result.stdout)
-        return
+    # Store the reference to the details window
+    open_details_windows[flight_name] = details_window
 
-    seat_matrix_output = result.stdout.strip().splitlines()
-    seat_matrix_display = "\n".join(seat_matrix_output)
+    # Check if the seat matrix is cached; if not, fetch it
+    seat_matrix_display = seat_matrices_cache.get(flight_name)
+    if seat_matrix_display is None:
+        result = subprocess.run(['./main_executable', 'seats'], capture_output=True, text=True)
 
+        if result.returncode != 0 or "Invalid" in result.stdout:
+            print(f"Error fetching seat matrix: {result.stderr or result.stdout}")  # Debugging statement
+            return
+
+        seat_matrix_output = result.stdout.strip().splitlines()
+        seat_matrix_display = "\n".join(seat_matrix_output)
+
+        # Cache the seat matrix for future reference
+        seat_matrices_cache[flight_name] = seat_matrix_display
+
+    # Define the seat matrix label here
     seat_matrix_label = customtkinter.CTkLabel(master=details_window, text=seat_matrix_display, font=("Roboto", 16))
     seat_matrix_label.pack(pady=20)
 
@@ -62,40 +84,60 @@ def open_flight_details(flight_name):
     
     seat_numbers_label = customtkinter.CTkLabel(master=booking_frame, text="Seat Numbers:")
     seat_numbers_label.pack(pady=10)
-    seat_numbers_entry = customtkinter.CTkEntry(master=booking_frame, placeholder_text="Enter seat numbers (e.g., 1A, 1B)")
+    seat_numbers_entry = customtkinter.CTkEntry(master=booking_frame, placeholder_text="Enter seat numbers (e.g., '1 1, 2 3')")
     seat_numbers_entry.pack(pady=10)
     
     book_button = customtkinter.CTkButton(
         master=booking_frame,
         text="Confirm Booking",
-        command=lambda: confirm_booking(seats_entry.get(), seat_numbers_entry.get(), details_window)
+        command=lambda: confirm_booking(seats_entry.get(), seat_numbers_entry.get(), details_window, seat_matrix_label, flight_name)
     )
     book_button.pack(pady=20)
 
-def confirm_booking(num_seats, seat_numbers, details_window):
+    # When the details window is closed, remove it from the dictionary
+    details_window.protocol("WM_DELETE_WINDOW", lambda: close_details_window(flight_name, details_window))
+
+def close_details_window(flight_name, details_window):
+    details_window.destroy()  # Close the window
+    del open_details_windows[flight_name]  # Remove the reference from the dictionary
+
+def confirm_booking(num_seats, seat_numbers, details_window, seat_matrix_label, flight_name):
     seat_positions = []
-    seat_numbers_list = seat_numbers.split(",")  # Get seat numbers from input
+    seat_numbers_list = seat_numbers.split(",")  # Split the input by commas to get multiple seat positions
 
     try:
         for sn in seat_numbers_list:
-            if not sn[:-1].isdigit() or len(sn) < 2 or not sn[-1].isalpha():
-                raise ValueError("Invalid seat format")
-            row = int(sn[:-1]) - 1  # Convert seat number to index (1-based to 0-based)
-            col = ord(sn[-1].upper()) - 65  # Convert letter to column index (A=0, B=1, etc.)
+            row_col = sn.strip().split()  # Split each seat into row and column (e.g., "1 1")
+            
+            if len(row_col) != 2 or not row_col[0].isdigit() or not row_col[1].isdigit():
+                raise ValueError("Invalid seat format. Expected row and column numbers.")
+
+            row = int(row_col[0]) - 1  # Convert row to 0-based index
+            col = int(row_col[1]) - 1  # Convert column to 0-based index
             seat_positions.append((row, col))
 
         # Call the C++ program to book the seats
-        book_seats(len(seat_positions), seat_positions, details_window)
+        result = book_seats(num_seats, seat_positions)
+
+        if result:
+            # Update the cached seat matrix for the flight
+            seat_matrices_cache[flight_name] = result
+            # Update the seat matrix label directly
+            seat_matrix_label.configure(text=result)
+        else:
+            print("Booking failed.")
 
     except ValueError as e:
         print(f"Error in seat input: {e}")
 
-def book_seats(num_seats, seat_positions, details_window):
+def book_seats(num_seats, seat_positions):
     # Build the command with seat booking data
     command = ['./main_executable', 'book', str(num_seats)]
+    
+    # Add seat positions to command (converted to 1-based for the C++ program)
     for seat in seat_positions:
-        command.append(str(seat[0]))  # Row
-        command.append(str(seat[1]))  # Column
+        command.append(str(seat[0] + 1))  # Row (convert to 1-based index)
+        command.append(str(seat[1] + 1))  # Column (convert to 1-based index)
 
     # Call the C++ executable with seat data
     result = subprocess.run(command, capture_output=True, text=True)
@@ -103,16 +145,10 @@ def book_seats(num_seats, seat_positions, details_window):
     # Check for errors
     if result.returncode != 0:
         print("Error booking seats:", result.stderr)
-        return
+        return None  # Indicate failure
 
-    # Display the updated seat matrix returned by C++
-    print("Booking result:", result.stdout)
-    refresh_seat_matrix(details_window)
-
-def refresh_seat_matrix(details_window):
-    # Refresh the seat matrix in the flight details window
-    details_window.destroy()
-    open_flight_details("Your Flight Name Here")  # Pass the actual flight name if needed
+    # Return the updated seat matrix returned by C++
+    return result.stdout.strip()
 
 # Main interface for search
 frame = customtkinter.CTkFrame(master=root)
