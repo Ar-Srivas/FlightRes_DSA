@@ -1,17 +1,17 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
-#include "Seat_matrix.cpp"
+#include "Seat_matrix.cpp"  // Adjust the filename based on your project structure
 #include "GraphForAirportFlight1.cpp"  // Ensure the filename is correct
 
 using namespace std;
 
 int main(int argc, char* argv[])
 {
-    Seat_mat s1;
-    s1.default_Seat_Matrix();
+    Seat_mat s1;  // Create a Seat_mat object
     AirportGraph flightMap;
-    
+
+    // Adding flights to the airport graph
     flightMap.addFlight("JFK", "LAX");
     flightMap.addFlight("JFK", "ORD");
     flightMap.addFlight("LAX", "SFO");
@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 
     // Check command line arguments
     if (argc < 2) {
-        cout << "Invalid arguments." << endl;
+        cout << "Invalid arguments. Please provide a command." << endl;
         return 1;
     }
 
@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
             return 1;
         }
         string airportCode = argv[2]; // Airport code should be passed as an argument
-        cout << flightMap.getFlightsFrom(airportCode); // Ensure this function returns a string
+        cout << flightMap.getFlightsFrom(airportCode) << endl; // Ensure this function returns a string
     }
     // Book seats
     else if (command == "book") {
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
         }
 
         int number_tickets = atoi(argv[2]);
-        
+
         if (argc < (3 + 2 * number_tickets)) {
             cout << "Insufficient seat position arguments." << endl;
             return 1;
