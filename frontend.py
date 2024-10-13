@@ -6,21 +6,16 @@ import subprocess
 customtkinter.set_appearance_mode("dark")
 customtkinter.set_default_color_theme("dark-blue")
 
-# Create main application window
 root = customtkinter.CTk()
 root.geometry("850x650")
 
-# Dictionary to keep track of open flight detail windows
 open_details_windows = {}
-# Dictionary to cache seat matrices for each flight
 seat_matrices_cache = {}
-# Dictionary to store reservations
 reservations = {}
 
-# Function to handle search and display results
 def search_flights():
-    query = search_entry.get().upper()  # Get user input from search bar
-    print(f"Searching for flights from: {query}")  # Debugging statement
+    query = search_entry.get().upper()
+    print(f"Searching for flights from: {query}")
     results_frame.pack_forget()  # Remove previous buttons before new search results
     results_frame.pack(pady=12, padx=10, fill="both", expand=True)
 
@@ -33,23 +28,22 @@ def search_flights():
 
     # Check for errors
     if result.returncode != 0:
-        print(f"Error fetching flights: {result.stderr}")  # Debugging statement
+        print(f"Error fetching flights: {result.stderr}")
         return
 
-    # Display the available flights returned by C++
+    # Display the available flights returned by C++ program
     flight_details = result.stdout.strip().split('\n')
     for flight in flight_details:
         flight_button = customtkinter.CTkButton(master=results_frame, text=flight, command=lambda f=flight: open_flight_details(f))
         flight_button.pack(pady=5, padx=10)
 
-# Function to open the flight details window
 def open_flight_details(flight_name):
     if flight_name in open_details_windows:
         # If the window is already open, bring it to the front
         open_details_windows[flight_name].focus()
         return
 
-    print(f"Opening details for flight: {flight_name}")  # Debugging statement
+    print(f"Opening details for flight: {flight_name}")
     details_window = customtkinter.CTkToplevel()
     details_window.geometry("800x600")
     details_window.title(f"Flight Details - {flight_name}")
@@ -58,22 +52,19 @@ def open_flight_details(flight_name):
     open_details_windows[flight_name] = details_window
 
     # Check if the seat matrix is cached; if not, fetch it
-    seat_matrix_display = seat_matrices_cache.get(flight_name)
-    if seat_matrix_display is None:
+    seat_matrix = seat_matrices_cache.get(flight_name)
+    if seat_matrix is None:
         result = subprocess.run(['./main_executable', 'seats'], capture_output=True, text=True)
 
         if result.returncode != 0 or "Invalid" in result.stdout:
-            print(f"Error fetching seat matrix: {result.stderr or result.stdout}")  # Debugging statement
+            print(f"Error fetching seat matrix: {result.stderr or result.stdout}")
             return
 
-        seat_matrix_output = result.stdout.strip().splitlines()
-        seat_matrix_display = "\n".join(seat_matrix_output)
+        seat_matrix = parse_seat_matrix(result.stdout.strip())  # Parse into 2D integer array
+        seat_matrices_cache[flight_name] = seat_matrix  # Cache it
 
-        # Cache the seat matrix for future reference
-        seat_matrices_cache[flight_name] = seat_matrix_output
-
-    # Define the seat matrix label here
-    seat_matrix_label = customtkinter.CTkLabel(master=details_window, text="\n".join(seat_matrices_cache[flight_name]), font=("Roboto", 16))
+    # Display the seat matrix in the window
+    seat_matrix_label = customtkinter.CTkLabel(master=details_window, text=format_seat_matrix(seat_matrix), font=("Roboto", 16))
     seat_matrix_label.pack(pady=20)
 
     booking_frame = customtkinter.CTkFrame(master=details_window)
@@ -115,83 +106,77 @@ def confirm_booking(customer_name, num_seats, seat_numbers, details_window, seat
     
     seat_positions = []
     seat_numbers_list = seat_numbers.split(",")  # Split the input by commas to get multiple seat positions
-
     try:
         for sn in seat_numbers_list:
             row_col = sn.strip().split()  # Split each seat into row and column (e.g., "1 3")
-            
             if len(row_col) != 2 or not row_col[0].isdigit() or not row_col[1].isdigit():
                 raise ValueError("Invalid seat format. Expected row and column numbers.")
-
             row = int(row_col[0]) - 1  # Convert row to 0-based index
             col = int(row_col[1]) - 1  # Convert column to 0-based index
             seat_positions.append((row, col))
-
+        
         # Call the C++ program to book the seats
         result = book_seats(customer_name, seat_positions, flight_name)
-
         if result:
             # Update the cached seat matrix for the flight
             seat_matrices_cache[flight_name] = result
+            
             # Update the seat matrix label directly
-            seat_matrix_label.configure(text="\n".join(seat_matrices_cache[flight_name]))
+            seat_matrix_label.configure(text=format_seat_matrix(result))
+            
             # Update reservations
             update_reservations(customer_name, flight_name, seat_numbers)
-
         else:
             print("Booking failed.")
-
     except ValueError as e:
         print(f"Error in seat input: {e}")
+
+def parse_seat_matrix(seat_matrix_str):
+    # Parse the string into a 2D list of integers
+    return [[int(seat) for seat in row.split()] for row in seat_matrix_str.splitlines()]
+
+def format_seat_matrix(seat_matrix):
+    # Format the 2D integer matrix into a string for display
+    return "\n".join(" ".join(map(str, row)) for row in seat_matrix)
 
 def book_seats(customer_name, seat_positions, flight_name):
     seat_matrix = seat_matrices_cache[flight_name]  # Use the cached seat matrix
     
-    # Mark the seats as booked in the seat matrix (1 for booked)
-    updated_matrix = []
-    for i, row in enumerate(seat_matrix):
-        row_list = list(row)
-        for pos in seat_positions:
-            if pos[0] == i:
-                row_list[pos[1]] = '1'  # Mark seat as booked
-        updated_matrix.append("".join(row_list))
+    # Mark the seats as booked with 1
+    for pos in seat_positions:
+        seat_matrix[pos[0]][pos[1]] = 1  # Mark seat as booked
     
     # Update the cache
-    return updated_matrix
+    return seat_matrix
 
 def update_reservations(customer_name, flight_name, seat_numbers):
     if flight_name not in reservations:
         reservations[flight_name] = []
     reservations[flight_name].append((customer_name, seat_numbers))
 
-# Global variable to keep track of the View Reservation window
-view_reservation_window = None
-
-# Function to open the View Reservations window
 def open_view_reservations():
     global view_reservation_window
-
     if view_reservation_window is not None and view_reservation_window.winfo_exists():
         # If the window is already open, bring it to the front
         view_reservation_window.focus()
         return
-
+    
     # Create a new window for viewing reservations
     view_reservation_window = customtkinter.CTkToplevel()
     view_reservation_window.geometry("800x600")
     view_reservation_window.title("View Reservations")
-
+    
     # Loop through all flights and show their seat matrix and reservations
     for flight_name, flight_reservations in reservations.items():
         flight_label = customtkinter.CTkLabel(master=view_reservation_window, text=f"Flight: {flight_name}", font=("Roboto", 18))
         flight_label.pack(pady=10)
-
+        
         # Get the final seat matrix for this flight
         seat_matrix = seat_matrices_cache.get(flight_name)
         if seat_matrix:
-            seat_matrix_label = customtkinter.CTkLabel(master=view_reservation_window, text="\n".join(seat_matrix), font=("Roboto", 12))
+            seat_matrix_label = customtkinter.CTkLabel(master=view_reservation_window, text=format_seat_matrix(seat_matrix), font=("Roboto", 12))
             seat_matrix_label.pack(pady=5)
-
+        
         # Display booked customers and their seat numbers
         if flight_reservations:
             reservations_label = customtkinter.CTkLabel(master=view_reservation_window, text="Reservations:", font=("Roboto", 16))
@@ -199,6 +184,9 @@ def open_view_reservations():
             for customer_name, seat_numbers in flight_reservations:
                 customer_label = customtkinter.CTkLabel(master=view_reservation_window, text=f"{customer_name} booked seats: {seat_numbers}", font=("Roboto", 12))
                 customer_label.pack(pady=2)
+
+# Global variable to keep track of the View Reservation window
+view_reservation_window = None
 
 # Main interface for search
 frame = customtkinter.CTkFrame(master=root)
@@ -227,5 +215,4 @@ results_frame.pack_forget()  # Initially hidden, will display after a search
 view_reservations_button = customtkinter.CTkButton(master=frame, text="View Reservations", command=open_view_reservations)
 view_reservations_button.pack(pady=20)
 
-# Start the main event loop
 root.mainloop()

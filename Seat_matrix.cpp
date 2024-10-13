@@ -3,17 +3,14 @@ using namespace std;
 
 class Seat_mat {
 public:
-    int m = 10;  // Number of rows
-    int n = 10;  // Number of columns
-    int seat[10][10];  // 2D array to hold seat status
-    int count_seat;  // Counts the number of seats booked
-
-    // Constructor to initialize the seat matrix
+    int m = 10; 
+    int n = 10; 
+    int seat[10][10];
+    int count_seat;  
     Seat_mat() {
         default_Seat_Matrix();  // Initialize seat matrix
         count_seat = 0;  // Initialize booked seat count
     }
-
     // Initialize the seat matrix to available
     void default_Seat_Matrix() {
         for (int i = 0; i < m; i++) {
@@ -22,7 +19,6 @@ public:
             }
         }
     }
-
     // Get the count of booked seats
     int get_booked_seat_count() const {
         return count_seat;  // Return the number of booked seats
@@ -33,7 +29,7 @@ public:
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
             // Print "O" for available and "X" for booked seats
-            cout << (seat[i][j] == 0 ? "O" : "X") << " "; 
+            cout << (seat[i][j] == 0 ? 0 : 1) << " "; 
         }
         cout << endl;
     }
