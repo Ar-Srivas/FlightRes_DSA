@@ -20,13 +20,20 @@ def draw_static_graph():
     # Create a sample graph for demonstration
     G = nx.Graph()
     G.add_edges_from([
-        ("New York", "Los Angeles"),
-        ("Chicago", "Houston"),
-        ("Houston", "Los Angeles"),
-        ("New York", "Chicago"),
-        ("Los Angeles", "Miami"),
-        ("Miami", "Houston")
-    ])
+    ("DEL", "BOM"),  # Delhi to Mumbai
+    ("DEL", "BLR"),  # Delhi to Bangalore
+    ("BOM", "HYD"),  # Mumbai to Hyderabad
+    ("BLR", "HYD"),  # Bangalore to Hyderabad
+    ("BOM", "CCU"),  # Mumbai to Kolkata
+    ("CCU", "HYD"),  # Kolkata to Hyderabad
+    ("HYD", "COK"),  # Hyderabad to Kochi
+    ("COK", "TRV"),  # Kochi to Thiruvananthapuram
+    ("BLR", "MAA"),  # Bangalore to Chennai
+    ("DEL", "AMD"),  # Delhi to Ahmedabad
+    ("DEL", "GOI"),  # Delhi to Goa
+    ("JAI", "DEL")   # Jaipur to Delhi
+])
+
     
     plt.figure(figsize=(8, 6))
     pos = nx.spring_layout(G)  # positions for all nodes

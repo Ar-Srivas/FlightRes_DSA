@@ -20,10 +20,28 @@ int main(int argc, char* argv[])
     AirportGraph flightMap;
 
     // Adding initial flights to the airport graph
-    flightMap.addFlight("JFK", "LAX");
-    flightMap.addFlight("JFK", "ORD");
-    flightMap.addFlight("LAX", "SFO");
-    flightMap.addFlight("ORD", "DFW");
+    flightMap.addFlight("DEL", "BOM");  // Delhi to Mumbai
+flightMap.addFlight("DEL", "BLR");  // Delhi to Bangalore
+flightMap.addFlight("DEL", "HYD");  // Delhi to Hyderabad
+flightMap.addFlight("DEL", "CCU");  // Delhi to Kolkata
+flightMap.addFlight("DEL", "AMD");  // Delhi to Ahmedabad
+flightMap.addFlight("BOM", "BLR");  // Mumbai to Bangalore
+flightMap.addFlight("BOM", "CCU");  // Mumbai to Kolkata
+flightMap.addFlight("BOM", "HYD");  // Mumbai to Hyderabad
+flightMap.addFlight("BOM", "COK");  // Mumbai to Kochi
+flightMap.addFlight("BLR", "HYD");  // Bangalore to Hyderabad
+flightMap.addFlight("BLR", "CCU");  // Bangalore to Kolkata
+flightMap.addFlight("BLR", "MAA");  // Bangalore to Chennai
+flightMap.addFlight("HYD", "CCU");  // Hyderabad to Kolkata
+flightMap.addFlight("HYD", "MAA");  // Hyderabad to Chennai
+flightMap.addFlight("MAA", "COK");  // Chennai to Kochi
+flightMap.addFlight("COK", "TRV");  // Kochi to Thiruvananthapuram
+flightMap.addFlight("CCU", "AMD");  // Kolkata to Ahmedabad
+flightMap.addFlight("CCU", "JAI");  // Kolkata to Jaipur
+flightMap.addFlight("DEL", "GOI");  // Delhi to Goa
+flightMap.addFlight("DEL", "VAR");  // Delhi to Varanasi
+flightMap.addFlight("BOM", "GOI");  // Mumbai to Goa
+
 
     // Check command line arguments
     if (argc < 2) {
