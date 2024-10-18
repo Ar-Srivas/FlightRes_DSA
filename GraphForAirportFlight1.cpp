@@ -2,35 +2,46 @@
 #include <map>
 #include <vector>
 #include <string>
-#include <sstream> 
+#include <sstream>
 using namespace std;
 
 class Flight {
 public:
     string destination;
 
-    Flight(string dest) {
-        destination = dest;
-    }
+    Flight(const string& dest) : destination(dest) {}
 };
 
 class AirportGraph {
     map<string, vector<Flight>> adjList;
 
 public:
+    // Add a flight from source to destination
     void addFlight(const string& source, const string& destination) {
-        adjList[source].push_back(Flight(destination));
+        adjList[source].emplace_back(destination); // Use emplace_back for efficiency
     }
-    string getFlightsFrom(const string& airportCode) {
-        if (adjList.find(airportCode) == adjList.end()) {
+
+    // Get all flights from a given airport code
+    string getFlightsFrom(const string& airportCode) const {
+        auto it = adjList.find(airportCode);
+        if (it == adjList.end()) {
             return "No flights found from airport " + airportCode + "\n";
         }
 
         stringstream ss;
-        //ss << "Flights from " << airportCode << ":\n";
-        for (const Flight& flight : adjList[airportCode]) {
+        for (const Flight& flight : it->second) {
             ss << "To " << flight.destination << "\n"; 
         }
         return ss.str();
+    }
+
+    // Function to print all flights (for debugging or external calls)
+    void printAllFlights() const {
+        for (const auto& entry : adjList) {
+            cout << "Flights from " << entry.first << ":\n";
+            for (const Flight& flight : entry.second) {
+                cout << "To " << flight.destination << "\n";
+            }
+        }
     }
 };

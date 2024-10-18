@@ -6,12 +6,20 @@
 
 using namespace std;
 
+void displayHelp() {
+    cout << "Available commands are:" << endl;
+    cout << "  add_flight <source> <destination> - Add a flight from source to destination." << endl;
+    cout << "  flights <airportCode> - Display flights from the given airport." << endl;
+    cout << "  book <numTickets> <row1> <col1> <row2> <col2>... - Book seats." << endl;
+    cout << "  seats - Display the current seat matrix." << endl;
+}
+
 int main(int argc, char* argv[])
 {
     Seat_mat s1;  // Create a Seat_mat object
     AirportGraph flightMap;
 
-    // Adding flights to the airport graph
+    // Adding initial flights to the airport graph
     flightMap.addFlight("JFK", "LAX");
     flightMap.addFlight("JFK", "ORD");
     flightMap.addFlight("LAX", "SFO");
@@ -20,13 +28,25 @@ int main(int argc, char* argv[])
     // Check command line arguments
     if (argc < 2) {
         cout << "Invalid arguments. Please provide a command." << endl;
+        displayHelp();
         return 1;
     }
 
     string command = argv[1];
 
+    // Add flights to the airport graph dynamically
+    if (command == "add_flight") {
+        if (argc != 4) {
+            cout << "Usage: add_flight <source> <destination>" << endl;
+            return 1;
+        }
+        string source = argv[2];
+        string destination = argv[3];
+        flightMap.addFlight(source, destination);
+        cout << "Flight added from " << source << " to " << destination << "." << endl;
+    }
     // Display available flights
-    if (command == "flights") {
+    else if (command == "flights") {
         if (argc < 3) {
             cout << "Please provide an airport code." << endl;
             return 1;
@@ -76,10 +96,8 @@ int main(int argc, char* argv[])
         s1.display_seat_Matrix(); // Display current seat matrix
     }
     else {
-        cout << "Invalid command. Available commands are:" << endl;
-        cout << "  flights <airportCode> - Display flights from the given airport." << endl;
-        cout << "  book <numTickets> <row1> <col1> <row2> <col2>... - Book seats." << endl;
-        cout << "  seats - Display the current seat matrix." << endl;
+        cout << "Invalid command." << endl;
+        displayHelp();
     }
 
     return 0;

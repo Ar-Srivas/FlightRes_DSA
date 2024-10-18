@@ -1,6 +1,8 @@
 import customtkinter
 import tkinter as tk
 import subprocess
+import matplotlib.pyplot as plt
+import networkx as nx
 
 # Set appearance mode and color theme
 customtkinter.set_appearance_mode("dark")
@@ -12,6 +14,37 @@ root.geometry("850x650")
 open_details_windows = {}
 seat_matrices_cache = {}
 reservations = {}
+view_reservation_window = None
+
+def draw_static_graph():
+    # Create a sample graph for demonstration
+    G = nx.Graph()
+    G.add_edges_from([
+        ("New York", "Los Angeles"),
+        ("Chicago", "Houston"),
+        ("Houston", "Los Angeles"),
+        ("New York", "Chicago"),
+        ("Los Angeles", "Miami"),
+        ("Miami", "Houston")
+    ])
+    
+    plt.figure(figsize=(8, 6))
+    pos = nx.spring_layout(G)  # positions for all nodes
+
+    # Draw the graph
+    nx.draw(G, pos, with_labels=True, node_size=2000, node_color='skyblue', font_size=16, font_color='black')
+    plt.title("Flight Connections")
+    plt.axis('off')  # Hide axes
+    plt.savefig("graph.png", format="png")  # Save the graph as an image
+    plt.close()  # Close the plot to prevent display
+
+    # Load the saved graph image
+    graph_image = tk.PhotoImage(file="graph.png")
+
+    # Create a label to display the graph
+    graph_label = customtkinter.CTkLabel(master=frame, text="", image=graph_image)
+    graph_label.image = graph_image  # Keep a reference to avoid garbage collection
+    graph_label.pack(pady=20)
 
 def search_flights():
     query = search_entry.get().upper()
@@ -36,6 +69,26 @@ def search_flights():
     for flight in flight_details:
         flight_button = customtkinter.CTkButton(master=results_frame, text=flight, command=lambda f=flight: open_flight_details(f))
         flight_button.pack(pady=5, padx=10)
+
+def fetch_flights():
+    try:
+        # Run the C++ executable (assumes it's compiled as 'flight_system')
+        result = subprocess.run(['./main_executable'], capture_output=True, text=True)
+        
+        # Check for errors
+        if result.returncode != 0:
+            print(f"Error fetching flights: {result.stderr}")
+            return "Failed to fetch flight data."
+        
+        # Return the flight data
+        return result.stdout
+    except Exception as e:
+        print(f"Exception occurred while fetching flights: {e}")
+        return "An error occurred."
+
+def display_flights():
+    flight_data = fetch_flights()
+    results_label.configure(text=flight_data)
 
 def open_flight_details(flight_name):
     if flight_name in open_details_windows:
@@ -160,59 +213,39 @@ def open_view_reservations():
         # If the window is already open, bring it to the front
         view_reservation_window.focus()
         return
-    
-    # Create a new window for viewing reservations
+
     view_reservation_window = customtkinter.CTkToplevel()
-    view_reservation_window.geometry("800x600")
+    view_reservation_window.geometry("400x400")
     view_reservation_window.title("View Reservations")
-    
-    # Loop through all flights and show their seat matrix and reservations
-    for flight_name, flight_reservations in reservations.items():
-        flight_label = customtkinter.CTkLabel(master=view_reservation_window, text=f"Flight: {flight_name}", font=("Roboto", 18))
-        flight_label.pack(pady=10)
-        
-        # Get the final seat matrix for this flight
-        seat_matrix = seat_matrices_cache.get(flight_name)
-        if seat_matrix:
-            seat_matrix_label = customtkinter.CTkLabel(master=view_reservation_window, text=format_seat_matrix(seat_matrix), font=("Roboto", 12))
-            seat_matrix_label.pack(pady=5)
-        
-        # Display booked customers and their seat numbers
-        if flight_reservations:
-            reservations_label = customtkinter.CTkLabel(master=view_reservation_window, text="Reservations:", font=("Roboto", 16))
-            reservations_label.pack(pady=5)
-            for customer_name, seat_numbers in flight_reservations:
-                customer_label = customtkinter.CTkLabel(master=view_reservation_window, text=f"{customer_name} booked seats: {seat_numbers}", font=("Roboto", 12))
-                customer_label.pack(pady=2)
 
-# Global variable to keep track of the View Reservation window
-view_reservation_window = None
+    for flight, res in reservations.items():
+        flight_label = customtkinter.CTkLabel(master=view_reservation_window, text=f"Flight: {flight}")
+        flight_label.pack(pady=5)
 
-# Main interface for search
+        for name, seat in res:
+            res_label = customtkinter.CTkLabel(master=view_reservation_window, text=f"Customer: {name}, Seats: {seat}")
+            res_label.pack(pady=5)
+
+# Frame for the results of the search
+results_frame = customtkinter.CTkFrame(master=root)
+results_frame.pack(pady=12, padx=10, fill="both", expand=True)
+
+# Create a frame for the main layout
 frame = customtkinter.CTkFrame(master=root)
-frame.pack(pady=20, padx=60, fill="both", expand=True)
+frame.pack(pady=20)
 
-label = customtkinter.CTkLabel(master=frame, text="Flight Reservation System", font=("Roboto", 32))
-label.pack(pady=12, padx=10)
+# Create search entry and buttons
+search_entry = customtkinter.CTkEntry(master=frame, placeholder_text="Enter departure city")
+search_entry.pack(pady=10, padx=20, fill=tk.X)
 
-# Create search label
-search_label = customtkinter.CTkLabel(master=frame, text="Search Flights", font=("Roboto", 24))
-search_label.pack(pady=12, padx=10)
+search_button = customtkinter.CTkButton(master=frame, text="Search Flights", command=search_flights)
+search_button.pack(pady=10)
 
-# Create search entry (input field)
-search_entry = customtkinter.CTkEntry(master=frame, placeholder_text="Enter flight or source city (e.g., NYC, LAX)")
-search_entry.pack(pady=12, padx=10)
-
-# Create search button
-search_button = customtkinter.CTkButton(master=frame, text="Search", command=search_flights)
-search_button.pack(pady=12, padx=10)
-
-# Create a frame for search results (flight list)
-results_frame = customtkinter.CTkFrame(master=frame)
-results_frame.pack_forget()  # Initially hidden, will display after a search
-
-# Create view reservations button
 view_reservations_button = customtkinter.CTkButton(master=frame, text="View Reservations", command=open_view_reservations)
-view_reservations_button.pack(pady=20)
+view_reservations_button.pack(pady=10)
 
+# Draw the static graph
+draw_static_graph()
+
+# Start the application
 root.mainloop()
