@@ -36,42 +36,38 @@ def draw_static_graph():
 
     
     plt.figure(figsize=(8, 6))
-    pos = nx.spring_layout(G)  # positions for all nodes
+    pos = nx.spring_layout(G)
 
     # Draw the graph
     nx.draw(G, pos, with_labels=True, node_size=2000, node_color='skyblue', font_size=16, font_color='black')
     plt.title("Flight Connections")
-    plt.axis('off')  # Hide axes
-    plt.savefig("graph.png", format="png")  # Save the graph as an image
-    plt.close()  # Close the plot to prevent display
+    plt.axis('off')
+    plt.savefig("graph.png", format="png")  
+    plt.close()
 
-    # Load the saved graph image
     graph_image = tk.PhotoImage(file="graph.png")
 
-    # Create a label to display the graph
+    
     graph_label = customtkinter.CTkLabel(master=frame, text="", image=graph_image)
-    graph_label.image = graph_image  # Keep a reference to avoid garbage collection
+    graph_label.image = graph_image
     graph_label.pack(pady=20)
 
 def search_flights():
     query = search_entry.get().upper()
     print(f"Searching for flights from: {query}")
-    results_frame.pack_forget()  # Remove previous buttons before new search results
+    results_frame.pack_forget()
     results_frame.pack(pady=12, padx=10, fill="both", expand=True)
 
-    # Clear previous search results
     for widget in results_frame.winfo_children():
         widget.destroy()
 
     # Call the C++ program to get flight details
     result = subprocess.run(['./main_executable', 'flights', query], capture_output=True, text=True)
 
-    # Check for errors
     if result.returncode != 0:
         print(f"Error fetching flights: {result.stderr}")
         return
-
-    # Display the available flights returned by C++ program
+    
     flight_details = result.stdout.strip().split('\n')
     for flight in flight_details:
         flight_button = customtkinter.CTkButton(master=results_frame, text=flight, command=lambda f=flight: open_flight_details(f))
@@ -79,15 +75,14 @@ def search_flights():
 
 def fetch_flights():
     try:
-        # Run the C++ executable (assumes it's compiled as 'flight_system')
+        
         result = subprocess.run(['./main_executable'], capture_output=True, text=True)
         
-        # Check for errors
+        
         if result.returncode != 0:
             print(f"Error fetching flights: {result.stderr}")
             return "Failed to fetch flight data."
         
-        # Return the flight data
         return result.stdout
     except Exception as e:
         print(f"Exception occurred while fetching flights: {e}")
@@ -99,7 +94,7 @@ def display_flights():
 
 def open_flight_details(flight_name):
     if flight_name in open_details_windows:
-        # If the window is already open, bring it to the front
+        
         open_details_windows[flight_name].focus()
         return
 
@@ -108,10 +103,8 @@ def open_flight_details(flight_name):
     details_window.geometry("800x600")
     details_window.title(f"Flight Details - {flight_name}")
 
-    # Store the reference to the details window
     open_details_windows[flight_name] = details_window
 
-    # Check if the seat matrix is cached; if not, fetch it
     seat_matrix = seat_matrices_cache.get(flight_name)
     if seat_matrix is None:
         result = subprocess.run(['./main_executable', 'seats'], capture_output=True, text=True)
@@ -120,10 +113,10 @@ def open_flight_details(flight_name):
             print(f"Error fetching seat matrix: {result.stderr or result.stdout}")
             return
 
-        seat_matrix = parse_seat_matrix(result.stdout.strip())  # Parse into 2D integer array
-        seat_matrices_cache[flight_name] = seat_matrix  # Cache it
-
-    # Display the seat matrix in the window
+        seat_matrix = parse_seat_matrix(result.stdout.strip())
+        seat_matrices_cache[flight_name] = seat_matrix
+    
+    
     seat_matrix_label = customtkinter.CTkLabel(master=details_window, text=format_seat_matrix(seat_matrix), font=("Roboto", 16))
     seat_matrix_label.pack(pady=20)
 
@@ -152,12 +145,11 @@ def open_flight_details(flight_name):
     )
     book_button.pack(pady=20)
 
-    # When the details window is closed, remove it from the dictionary
     details_window.protocol("WM_DELETE_WINDOW", lambda: close_details_window(flight_name, details_window))
 
 def close_details_window(flight_name, details_window):
-    details_window.destroy()  # Close the window
-    del open_details_windows[flight_name]  # Remove the reference from the dictionary
+    details_window.destroy()
+    del open_details_windows[flight_name] 
 
 def confirm_booking(customer_name, num_seats, seat_numbers, details_window, seat_matrix_label, flight_name):
     if not customer_name.strip():
@@ -165,7 +157,7 @@ def confirm_booking(customer_name, num_seats, seat_numbers, details_window, seat
         return
     
     seat_positions = []
-    seat_numbers_list = seat_numbers.split(",")  # Split the input by commas to get multiple seat positions
+    seat_numbers_list = seat_numbers.split(",")
     try:
         for sn in seat_numbers_list:
             row_col = sn.strip().split()  # Split each seat into row and column (e.g., "1 3")
@@ -175,16 +167,10 @@ def confirm_booking(customer_name, num_seats, seat_numbers, details_window, seat
             col = int(row_col[1]) - 1  # Convert column to 0-based index
             seat_positions.append((row, col))
         
-        # Call the C++ program to book the seats
         result = book_seats(customer_name, seat_positions, flight_name)
         if result:
-            # Update the cached seat matrix for the flight
             seat_matrices_cache[flight_name] = result
-            
-            # Update the seat matrix label directly
             seat_matrix_label.configure(text=format_seat_matrix(result))
-            
-            # Update reservations
             update_reservations(customer_name, flight_name, seat_numbers)
         else:
             print("Booking failed.")
@@ -192,21 +178,17 @@ def confirm_booking(customer_name, num_seats, seat_numbers, details_window, seat
         print(f"Error in seat input: {e}")
 
 def parse_seat_matrix(seat_matrix_str):
-    # Parse the string into a 2D list of integers
     return [[int(seat) for seat in row.split()] for row in seat_matrix_str.splitlines()]
 
 def format_seat_matrix(seat_matrix):
-    # Format the 2D integer matrix into a string for display
     return "\n".join(" ".join(map(str, row)) for row in seat_matrix)
 
 def book_seats(customer_name, seat_positions, flight_name):
-    seat_matrix = seat_matrices_cache[flight_name]  # Use the cached seat matrix
+    seat_matrix = seat_matrices_cache[flight_name]
     
-    # Mark the seats as booked with 1
     for pos in seat_positions:
-        seat_matrix[pos[0]][pos[1]] = 1  # Mark seat as booked
+        seat_matrix[pos[0]][pos[1]] = 1
     
-    # Update the cache
     return seat_matrix
 
 def update_reservations(customer_name, flight_name, seat_numbers):
@@ -217,7 +199,6 @@ def update_reservations(customer_name, flight_name, seat_numbers):
 def open_view_reservations():
     global view_reservation_window
     if view_reservation_window is not None and view_reservation_window.winfo_exists():
-        # If the window is already open, bring it to the front
         view_reservation_window.focus()
         return
 
@@ -233,7 +214,7 @@ def open_view_reservations():
             res_label = customtkinter.CTkLabel(master=view_reservation_window, text=f"Customer: {name}, Seats: {seat}")
             res_label.pack(pady=5)
 
-# Frame for the results of the search
+
 results_frame = customtkinter.CTkFrame(master=root)
 results_frame.pack(pady=12, padx=10, fill="both", expand=True)
 

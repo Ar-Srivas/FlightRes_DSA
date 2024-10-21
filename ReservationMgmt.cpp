@@ -97,7 +97,7 @@ bool checkSeatAvailability(int& row, int& col) {
 
 void cancelSeat(int row, int col) {
     if (row >= 0 && row < rows && col >= 0 && col < cols && seatMatrix[row][col] == 1) {
-        seatMatrix[row][col] = 0;  // Mark seat as available
+        seatMatrix[row][col] = 0; 
         cout << "Seat at Row " << row + 1 << ", Column " << col + 1 << " has been freed.\n";
     } else {
         cout << "Invalid seat cancellation.\n";

@@ -16,12 +16,10 @@ class AirportGraph {
     map<string, vector<Flight>> adjList;
 
 public:
-    // Add a flight from source to destination
     void addFlight(const string& source, const string& destination) {
-        adjList[source].emplace_back(destination); // Use emplace_back for efficiency
+        adjList[source].emplace_back(destination);
     }
 
-    // Get all flights from a given airport code
     string getFlightsFrom(const string& airportCode) const {
         auto it = adjList.find(airportCode);
         if (it == adjList.end()) {
@@ -35,7 +33,6 @@ public:
         return ss.str();
     }
 
-    // Function to print all flights (for debugging or external calls)
     void printAllFlights() const {
         for (const auto& entry : adjList) {
             cout << "Flights from " << entry.first << ":\n";
